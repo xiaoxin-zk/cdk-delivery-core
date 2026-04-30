@@ -605,3 +605,34 @@ describe("后台中文化和配置开关", () => {
     expect(source("src/components/auth/AuthForms.tsx")).toContain("当前站点已关闭注册");
   });
 });
+
+describe("默认安装配置", () => {
+  it("提供自动生成 .env 的安装脚本且不会提交真实 .env", () => {
+    const packageJson = JSON.parse(source("package.json")) as { scripts: Record<string, string> };
+    const setupScript = source("scripts/setup-env.js");
+    const gitignore = source(".gitignore");
+
+    expect(packageJson.scripts.setup).toBe("node scripts/setup-env.js");
+    expect(packageJson.scripts.postinstall).toBe("node scripts/setup-env.js");
+    expect(setupScript).toContain("randomBytes");
+    expect(setupScript).toContain("writeFileSync(envPath, defaultEnv()");
+    expect(setupScript).toContain(".env already exists; keeping existing local configuration.");
+    expect(gitignore).toContain(".env");
+    expect(gitignore).toContain(".env.local");
+  });
+
+  it("Docker Compose 有免手写 .env 的安全本地默认值", () => {
+    const compose = source("docker-compose.yml");
+    expect(compose).toContain("DATABASE_URL: ${DATABASE_URL:-postgresql://cdk:local-cdk-delivery-postgres-password@postgres:5432/cdk_delivery_core?schema=public}");
+    expect(compose).toContain("JWT_SECRET: ${JWT_SECRET:-local-jwt-secret-change-before-public-use-32chars}");
+    expect(compose).toContain("APP_SECRET: ${APP_SECRET:-local-app-secret-change-before-public-use-32chars}");
+    expect(compose).toContain("POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-cdk-delivery-postgres-password}");
+  });
+
+  it("README 说明 npm run setup 自动生成本地配置", () => {
+    const readme = source("README.md");
+    expect(readme).toContain("npm run setup");
+    expect(readme).toContain("npm install` also runs this setup automatically");
+    expect(readme).toContain("new users do not need to hand-write a configuration file");
+  });
+});

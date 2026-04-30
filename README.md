@@ -15,30 +15,33 @@ CDK Delivery Core is a Next.js + Prisma + PostgreSQL web application for lawful 
 
 ## Quick start with Docker Compose
 
-1. Prepare environment variables:
+1. Generate local environment variables:
 
 ```bash
-cp .env.example .env
+npm run setup
 ```
 
-2. Edit `.env` before the first production start:
+`npm install` also runs this setup automatically. If `.env` already exists, it will be kept unchanged.
 
-- Replace `POSTGRES_PASSWORD` with a strong random value and keep `DATABASE_URL` in sync.
-- Replace `JWT_SECRET` and `APP_SECRET` with different random values of at least 32 characters.
-- Replace `ADMIN_PASSWORD` with a strong password, or remove `ADMIN_EMAIL`/`ADMIN_PASSWORD` if you do not want automatic admin bootstrap.
-- Set `APP_URL` to the public URL used by users and email links.
-
-3. Start the full stack:
+2. Start the full stack:
 
 ```bash
 docker compose up -d --build
 ```
 
-4. Open the app:
+3. Open the app:
 
 ```text
 http://localhost:3000
 ```
+
+The generated `.env` includes random local values for `POSTGRES_PASSWORD`, `JWT_SECRET`, `APP_SECRET`, and `ADMIN_PASSWORD`, so new users do not need to hand-write a configuration file.
+
+Before exposing the app to the public internet, review `.env` and set:
+
+- `APP_URL` to the public URL used by users and email links.
+- `ADMIN_EMAIL` and `ADMIN_PASSWORD` to your real initial admin account, or remove both after bootstrap.
+- SMTP and Turnstile settings if those features are needed.
 
 Inside Docker, database and Redis hosts must use Compose service names:
 
@@ -191,7 +194,7 @@ Prisma migrations are applied by `npm run bootstrap:prod` during app startup.
 
 ### `POSTGRES_PASSWORD is required`
 
-Create `.env` from `.env.example` and set a strong `POSTGRES_PASSWORD`. Also update `DATABASE_URL` to use the same password.
+Run `npm run setup` to generate `.env`, or create one from `.env.example` manually. If you manually edit `POSTGRES_PASSWORD`, also update `DATABASE_URL` to use the same password.
 
 ### App container exits during bootstrap
 
@@ -223,6 +226,7 @@ The repository includes `public/favicon.ico`. Rebuild the image and confirm the 
 
 ```bash
 npm install
+npm run setup
 npm run db:generate
 npm run db:migrate
 npm run db:seed

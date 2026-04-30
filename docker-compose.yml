@@ -8,6 +8,24 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      APP_PORT: ${APP_PORT:-3000}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://cdk:local-cdk-delivery-postgres-password@postgres:5432/cdk_delivery_core?schema=public}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_SECRET: ${JWT_SECRET:-local-jwt-secret-change-before-public-use-32chars}
+      APP_SECRET: ${APP_SECRET:-local-app-secret-change-before-public-use-32chars}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-local-admin-password-change-me-12345}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-CDK Delivery Core}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-no-reply@example.com}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
     ports:
       - "${APP_PORT:-3000}:3000"
     healthcheck:
@@ -23,7 +41,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-cdk_delivery_core}
       POSTGRES_USER: ${POSTGRES_USER:-cdk}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required; copy .env.example to .env and set a strong value}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-cdk-delivery-postgres-password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
