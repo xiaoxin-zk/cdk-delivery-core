@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ALTER COLUMN "claim_mode" SET DEFAULT 'LOTTERY';

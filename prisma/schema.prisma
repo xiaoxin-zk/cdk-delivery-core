@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+  DELETED
+}
+
+enum ProjectStatus {
+  DRAFT
+  PUBLIC
+  PAUSED
+  ENDED
+  DISABLED
+}
+
+enum ProjectVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum ClaimMode {
+  LOTTERY
+  ONCE
+  REPEAT
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CdkStatus {
+  AVAILABLE
+  CLAIMED
+  DISABLED
+}
+
+enum ClaimAttemptResult {
+  WON
+  LOST
+}
+
+enum EmailTokenType {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+enum SettingValueType {
+  STRING
+  BOOLEAN
+  JSON_ARRAY
+  SECRET
+}
+
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  passwordHash  String     @map("password_hash")
+  role          UserRole   @default(USER)
+  status        UserStatus @default(ACTIVE)
+  emailVerified Boolean    @default(false) @map("email_verified")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  lastLoginAt   DateTime?  @map("last_login_at")
+
+  projects    Project[]
+  cdksClaimed Cdk[]       @relation("ClaimedCdks")
+  claims      Claim[]
+  claimAttempts ClaimAttempt[]
+  emailTokens EmailToken[]
+  auditLogs   AuditLog[]  @relation("ActorAuditLogs")
+
+  @@map("users")
+}
+
+model Project {
+  id               String            @id @default(uuid())
+  ownerId          String            @map("owner_id")
+  name             String
+  description      String
+  content          String
+  instructions     String
+  coverImage       String?           @map("cover_image")
+  status           ProjectStatus     @default(DRAFT)
+  visibility       ProjectVisibility @default(PUBLIC)
+  claimMode        ClaimMode         @default(LOTTERY) @map("claim_mode")
+  lotteryProbability Int             @default(100) @map("lottery_probability")
+  requireLogin     Boolean           @default(true) @map("require_login")
+  startAt          DateTime?         @map("start_at")
+  endAt            DateTime?         @map("end_at")
+  dailyLimit       Int?              @map("daily_limit")
+  totalLimit       Int?              @map("total_limit")
+  perUserLimit     Int?              @map("per_user_limit")
+  reviewStatus     ReviewStatus      @default(APPROVED) @map("review_status")
+  reviewReason     String?           @map("review_reason")
+  illegalConfirmed Boolean           @default(false) @map("illegal_confirmed")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  owner  User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  cdks   Cdk[]
+  claims Claim[]
+  claimAttempts ClaimAttempt[]
+
+  @@index([ownerId])
+  @@index([status, visibility, reviewStatus])
+  @@map("projects")
+}
+
+model Cdk {
+  id         String    @id @default(uuid())
+  projectId  String    @map("project_id")
+  code       String
+  status     CdkStatus @default(AVAILABLE)
+  claimedBy  String?   @map("claimed_by")
+  claimedAt  DateTime? @map("claimed_at")
+  disabledAt DateTime? @map("disabled_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  claimer User?   @relation("ClaimedCdks", fields: [claimedBy], references: [id], onDelete: SetNull)
+  claim   Claim?
+  claimAttempt ClaimAttempt?
+
+  @@index([projectId, status])
+  @@index([claimedBy])
+  @@map("cdks")
+}
+
+model Claim {
+  id                String   @id @default(uuid())
+  projectId         String   @map("project_id")
+  cdkId             String   @unique @map("cdk_id")
+  userId            String?  @map("user_id")
+  emailOrIdentifier String?  @map("email_or_identifier")
+  claimModeSnapshot ClaimMode @default(ONCE) @map("claim_mode_snapshot")
+  ip                String?
+  userAgent         String?  @map("user_agent")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  cdk     Cdk     @relation(fields: [cdkId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt])
+  @@index([userId, projectId])
+  @@index([projectId, userId, claimModeSnapshot])
+  @@index([projectId, emailOrIdentifier, claimModeSnapshot])
+  @@map("claims")
+}
+
+model ClaimAttempt {
+  id                String             @id @default(uuid())
+  projectId         String             @map("project_id")
+  cdkId             String?            @unique @map("cdk_id")
+  userId            String?            @map("user_id")
+  emailOrIdentifier String?            @map("email_or_identifier")
+  result            ClaimAttemptResult
+  claimModeSnapshot ClaimMode          @default(LOTTERY) @map("claim_mode_snapshot")
+  ip                String?
+  userAgent         String?            @map("user_agent")
+  createdAt         DateTime           @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  cdk     Cdk?    @relation(fields: [cdkId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt])
+  @@index([userId, projectId])
+  @@index([emailOrIdentifier, projectId])
+  @@index([projectId, userId, claimModeSnapshot])
+  @@index([projectId, emailOrIdentifier, claimModeSnapshot])
+  @@index([projectId, claimModeSnapshot, createdAt])
+  @@map("claim_attempts")
+}
+
+model SystemSetting {
+  key       String           @id
+  value     String
+  valueType SettingValueType @default(STRING) @map("value_type")
+  encrypted Boolean          @default(false)
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+model EmailToken {
+  id        String         @id @default(uuid())
+  userId    String         @map("user_id")
+  type      EmailTokenType
+  tokenHash String         @map("token_hash")
+  expiresAt DateTime       @map("expires_at")
+  usedAt    DateTime?      @map("used_at")
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([tokenHash])
+  @@map("email_tokens")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?  @map("actor_id")
+  action     String
+  targetType String   @map("target_type")
+  targetId   String?  @map("target_id")
+  metadata   Json?
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor User? @relation("ActorAuditLogs", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+  @@map("audit_logs")
+}
+
+model SensitiveWord {
+  id        String   @id @default(uuid())
+  word      String   @unique
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("sensitive_words")
+}
