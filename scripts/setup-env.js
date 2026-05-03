@@ -20,8 +20,8 @@ APP_URL=http://localhost:3000
 POSTGRES_DB=cdk_delivery_core
 POSTGRES_USER=cdk
 POSTGRES_PASSWORD=${postgresPassword}
-DATABASE_URL=postgresql://cdk:${postgresPassword}@postgres:5432/cdk_delivery_core?schema=public
-REDIS_URL=redis://redis:6379
+DATABASE_URL=postgresql://cdk:${postgresPassword}@postgres:5432/cdk_delivery_core?schema=public&connection_limit=3
+REDIS_URL=
 
 # Required secrets. Generated locally; do not commit .env.
 JWT_SECRET=${secret(32)}

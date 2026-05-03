@@ -8,6 +8,7 @@ type Bucket = {
 };
 
 const memoryBuckets = new Map<string, Bucket>();
+let lastPurge = Date.now();
 let redis: Redis | null | undefined;
 
 function getRedis() {
@@ -36,6 +37,14 @@ export async function enforceRateLimit(key: string, limit: number, windowSeconds
   }
 
   const now = Date.now();
+
+  if (now - lastPurge > 60_000) {
+    lastPurge = now;
+    for (const [k, v] of memoryBuckets) {
+      if (v.expiresAt <= now) memoryBuckets.delete(k);
+    }
+  }
+
   const bucket = memoryBuckets.get(key);
   if (!bucket || bucket.expiresAt <= now) {
     memoryBuckets.set(key, { count: 1, expiresAt: now + windowSeconds * 1000 });
