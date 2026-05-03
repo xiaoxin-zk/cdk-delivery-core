@@ -38,6 +38,7 @@ export function LoginForm({ settings }: { settings: PublicSettings }) {
   async function submit(formData: FormData) {
     setLoading(true);
     setError("");
+    setMessage("");
     try {
       await api("/api/auth/login", {
         method: "POST",
@@ -95,6 +96,7 @@ export function RegisterForm({ settings }: { settings: PublicSettings }) {
   async function submit(formData: FormData) {
     setLoading(true);
     setError("");
+    setMessage("");
     try {
       await api("/api/auth/register", {
         method: "POST",
