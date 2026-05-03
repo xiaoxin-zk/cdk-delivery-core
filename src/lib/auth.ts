@@ -8,6 +8,11 @@ import { prisma } from "@/lib/prisma";
 
 export const AUTH_COOKIE = "cdkdc_session";
 
+function isSecureCookie() {
+  const url = process.env.APP_URL ?? "";
+  return url.startsWith("https://");
+}
+
 export type AuthUser = {
   id: string;
   email: string;
@@ -38,7 +43,7 @@ export function setAuthCookie(response: NextResponse, token: string, remember = 
   response.cookies.set(AUTH_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureCookie(),
     path: "/",
     maxAge: remember ? 60 * 60 * 24 * 30 : 60 * 60 * 8
   });
@@ -48,7 +53,7 @@ export function clearAuthCookie(response: NextResponse) {
   response.cookies.set(AUTH_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureCookie(),
     path: "/",
     maxAge: 0
   });
