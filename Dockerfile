@@ -25,7 +25,7 @@ RUN npm run build
 # ── Runner (production) ──────────────────────────────
 FROM base AS runner
 ENV NODE_ENV=production
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl openssl
 
 # Next.js standalone output (includes only traced node_modules)
 COPY --from=builder /app/.next/standalone ./
