@@ -3,6 +3,13 @@ node_modules
 .git
 docker-data
 coverage
+test-results
 .env
+.env.local
 *.log
 tsconfig.tsbuildinfo
+README.md
+.editorconfig
+.eslintrc.json
+vitest.config.ts
+tests
