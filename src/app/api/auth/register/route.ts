@@ -28,6 +28,9 @@ export function POST(request: NextRequest) {
       throw new ApiError("该邮箱后缀暂不允许注册", 403, "EMAIL_DOMAIN_BLOCKED");
     }
 
+    const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    if (existing) throw new ApiError("该邮箱已被注册", 409, "EMAIL_ALREADY_REGISTERED");
+
     const passwordHash = await hashPassword(body.password);
     const user = await prisma.user.create({
       data: {

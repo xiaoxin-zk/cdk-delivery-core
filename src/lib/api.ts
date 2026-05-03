@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
@@ -32,6 +33,9 @@ export async function route(handler: () => Promise<Response>) {
     }
     if (error instanceof ZodError) {
       return fail(error.issues[0]?.message ?? "请求参数不合法", 422, "VALIDATION_ERROR");
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return fail("该记录已存在（唯一约束冲突）", 409, "DUPLICATE");
     }
     console.error("unhandled api error", error instanceof Error ? error.name : typeof error);
     return fail("服务器暂时无法处理请求", 500, "INTERNAL_ERROR");
