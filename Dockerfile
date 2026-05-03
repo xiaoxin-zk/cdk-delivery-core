@@ -19,7 +19,7 @@ COPY . .
 RUN npx esbuild scripts/bootstrap-production.ts \
       --bundle --platform=node --format=cjs \
       --outfile=scripts/bootstrap-production.js \
-      --external:@prisma/client --external:bcryptjs
+      --external:@prisma/client
 RUN npm run build
 
 # ── Runner (production) ──────────────────────────────
