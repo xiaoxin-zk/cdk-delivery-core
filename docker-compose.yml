@@ -11,7 +11,7 @@ services:
     environment:
       APP_PORT: ${APP_PORT:-3000}
       APP_URL: ${APP_URL:-http://localhost:3000}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://cdk:local-cdk-delivery-postgres-password@postgres:5432/cdk_delivery_core?schema=public}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://cdk:local-cdk-delivery-postgres-password@postgres:5432/cdk_delivery_core?schema=public&connection_limit=5}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-local-jwt-secret-change-before-public-use-32chars}
       APP_SECRET: ${APP_SECRET:-local-app-secret-change-before-public-use-32chars}
@@ -26,6 +26,7 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-false}
       TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      NODE_OPTIONS: "--max-old-space-size=256"
     ports:
       - "${APP_PORT:-3000}:3000"
     healthcheck:
@@ -34,6 +35,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     restart: unless-stopped
 
   postgres:
@@ -42,6 +47,18 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-cdk_delivery_core}
       POSTGRES_USER: ${POSTGRES_USER:-cdk}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-cdk-delivery-postgres-password}
+    command:
+      - "postgres"
+      - "-c" 
+      - "shared_buffers=64MB"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "maintenance_work_mem=32MB"
+      - "-c"
+      - "effective_cache_size=128MB"
+      - "-c"
+      - "max_connections=30"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -49,11 +66,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--appendonly", "yes"]
+    command:
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      - "--maxmemory"
+      - "64mb"
+      - "--maxmemory-policy"
+      - "allkeys-lru"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -61,6 +89,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 96M
     restart: unless-stopped
 
 volumes:
