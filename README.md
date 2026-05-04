@@ -90,6 +90,22 @@ http://localhost:3000
 
 因此新用户不需要手写配置文件即可启动本地环境。
 
+### Linux 服务器预构建镜像部署
+
+如果使用 GitHub 预构建镜像，可以直接运行：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xiaoxin-zk/cdk-delivery-core/main/deploy.sh | bash
+```
+
+Git 不在默认路径时传入 `GIT_BIN`；使用自己的 GitHub 仓库时传入 `REPO_URL`：
+
+```bash
+GIT_BIN=/opt/git/bin/git REPO_URL=https://github.com/your-name/your-repo.git bash deploy.sh
+```
+
+首次启动前请把 `.env` 里的 `APP_URL` 改成真实域名或服务器访问地址，否则注册验证、找回密码邮件里的链接会不正确。
+
 ### 默认管理员
 
 自动生成的 `.env` 默认包含：
@@ -150,7 +166,7 @@ REDIS_URL=redis://redis:6379
 | `SMTP_USERNAME` | 否 | SMTP 用户名 |
 | `SMTP_PASSWORD` | 否 | SMTP 密码，保存到系统设置时会加密 |
 | `SMTP_FROM_NAME` | 否 | 发件人名称 |
-| `SMTP_FROM_EMAIL` | 否 | 发件人邮箱 |
+| `SMTP_FROM_EMAIL` | 否 | 发件人邮箱。留空时使用 `SMTP_USERNAME` |
 | `SMTP_SECURE` | 否 | 是否使用隐式 TLS |
 | `TURNSTILE_SITE_KEY` | 否 | Cloudflare Turnstile Site Key |
 | `TURNSTILE_SECRET_KEY` | 否 | Cloudflare Turnstile Secret Key |
@@ -227,7 +243,9 @@ docker compose logs -f app
 
 #### 邮件无法发送
 
-检查 SMTP 主机、端口、用户名、密码、发件邮箱和 `SMTP_SECURE`。这些配置既可以写在 `.env`，也可以在后台邮件设置中配置。
+检查 SMTP 主机、端口、用户名、密码、发件邮箱和 `SMTP_SECURE`。这些配置既可以写在 `.env`，也可以在后台邮件设置中配置。发件邮箱留空时系统会使用 `SMTP_USERNAME`；多数邮箱服务商要求发件邮箱与 SMTP 账号一致或是已验证别名。
+
+如果开启了邮箱验证，注册验证邮件发送失败时接口会返回 SMTP 错误，并自动清理刚创建的用户，避免出现“前台注册失败、后台已经有用户”的半注册状态。
 
 #### Turnstile 显示未配置
 
@@ -328,6 +346,22 @@ The generated `.env` includes random local values for:
 
 This lets new users start the app without hand-writing a configuration file.
 
+### Linux Server Deployment With Prebuilt Image
+
+If you use the GitHub prebuilt image, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xiaoxin-zk/cdk-delivery-core/main/deploy.sh | bash
+```
+
+If Git is not in the default path, pass `GIT_BIN`. If you deploy from your own GitHub repository, pass `REPO_URL`:
+
+```bash
+GIT_BIN=/opt/git/bin/git REPO_URL=https://github.com/your-name/your-repo.git bash deploy.sh
+```
+
+Before the first production start, set `APP_URL` in `.env` to your real domain or server URL. Otherwise verification and password reset emails will contain the wrong link.
+
 ### Default Admin
 
 The generated `.env` uses:
@@ -388,7 +422,7 @@ Do not use `localhost:5432` inside the app container, because `localhost` points
 | `SMTP_USERNAME` | No | SMTP username. |
 | `SMTP_PASSWORD` | No | SMTP password. Stored encrypted when saved to system settings. |
 | `SMTP_FROM_NAME` | No | Sender display name. |
-| `SMTP_FROM_EMAIL` | No | Sender email address. |
+| `SMTP_FROM_EMAIL` | No | Sender email address. If empty, `SMTP_USERNAME` is used. |
 | `SMTP_SECURE` | No | `true` for implicit TLS, otherwise `false`. |
 | `TURNSTILE_SITE_KEY` | No | Cloudflare Turnstile site key. |
 | `TURNSTILE_SECRET_KEY` | No | Cloudflare Turnstile secret key. Stored encrypted when saved to system settings. |
@@ -465,7 +499,9 @@ If SMTP and forgot password are enabled, use the forgot password flow. Otherwise
 
 #### Emails Are Not Sent
 
-Check SMTP host, port, username, password, sender address, and `SMTP_SECURE`. You can configure these in `.env` or in `/admin/email`.
+Check SMTP host, port, username, password, sender address, and `SMTP_SECURE`. You can configure these in `.env` or in `/admin/email`. If the sender address is empty, the app uses `SMTP_USERNAME`; many providers require the sender to match the SMTP account or a verified alias.
+
+When email verification is enabled, a verification email failure now returns an SMTP error and removes the just-created user so the app does not leave a half-registered account behind.
 
 #### Turnstile Reports Missing Configuration
 

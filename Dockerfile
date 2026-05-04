@@ -16,7 +16,7 @@ RUN npx prisma generate
 # Copy source and build
 COPY . .
 # Compile bootstrap script to JS (eliminates tsx runtime dependency)
-RUN npx esbuild scripts/bootstrap-production.ts \
+RUN ./node_modules/.bin/esbuild scripts/bootstrap-production.ts \
       --bundle --platform=node --format=cjs \
       --outfile=scripts/bootstrap-production.js \
       --external:@prisma/client

@@ -21,7 +21,10 @@ export async function sendMail(input: MailInput) {
   ]);
 
   const host = settings.get("smtp.host") ?? "";
-  const fromEmail = settings.get("smtp.fromEmail") ?? "";
+  const username = settings.get("smtp.username") ?? "";
+  const password = settings.get("smtp.password") ?? "";
+  const configuredFromEmail = settings.get("smtp.fromEmail") ?? "";
+  const fromEmail = configuredFromEmail === "no-reply@example.com" ? username : configuredFromEmail || username;
   if (!host || !fromEmail) {
     if (env.nodeEnv === "development") {
       console.log("SMTP is not configured. Mail preview:", input);
@@ -34,20 +37,25 @@ export async function sendMail(input: MailInput) {
     host,
     port: Number(settings.get("smtp.port") ?? "587"),
     secure: asBoolean(settings.get("smtp.secure")),
-    auth: settings.get("smtp.username")
+    auth: username
       ? {
-          user: settings.get("smtp.username"),
-          pass: settings.get("smtp.password")
+          user: username,
+          pass: password
         }
       : undefined
   });
 
-  await transporter.sendMail({
-    to: input.to,
-    subject: input.subject,
-    from: `"${settings.get("smtp.fromName") ?? "CDK Delivery Core"}" <${fromEmail}>`,
-    html: input.html
-  });
+  try {
+    await transporter.sendMail({
+      to: input.to,
+      subject: input.subject,
+      from: `"${settings.get("smtp.fromName") ?? "CDK Delivery Core"}" <${fromEmail}>`,
+      html: input.html
+    });
+  } catch (error) {
+    console.error("mail send failed", error instanceof Error ? error.message : error);
+    throw new ApiError("邮件发送失败，请检查 SMTP 配置或联系管理员", 502, "SMTP_SEND_FAILED");
+  }
 }
 
 export function buildActionEmail(options: {

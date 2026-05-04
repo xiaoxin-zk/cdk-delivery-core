@@ -604,6 +604,17 @@ describe("后台中文化和配置开关", () => {
     expect(source("src/app/api/auth/register/route.ts")).toContain("管理员已关闭注册");
     expect(source("src/components/auth/AuthForms.tsx")).toContain("当前站点已关闭注册");
   });
+
+  it("注册验证邮件发送失败时不会留下半注册用户", () => {
+    const registerRoute = source("src/app/api/auth/register/route.ts");
+    const mailer = source("src/lib/mailer.ts");
+
+    expect(registerRoute).toContain("await prisma.emailToken.create");
+    expect(registerRoute).toContain("await sendMail");
+    expect(registerRoute).toContain("await prisma.user.delete({ where: { id: user.id } }).catch(() => undefined)");
+    expect(mailer).toContain("SMTP_SEND_FAILED");
+    expect(mailer).toContain("configuredFromEmail === \"no-reply@example.com\" ? username");
+  });
 });
 
 describe("默认安装配置", () => {
@@ -617,22 +628,38 @@ describe("默认安装配置", () => {
     expect(setupScript).toContain("randomBytes");
     expect(setupScript).toContain("writeFileSync(envPath, defaultEnv()");
     expect(setupScript).toContain(".env already exists; keeping existing local configuration.");
+    expect(setupScript).toContain("Leave empty to use SMTP_USERNAME as the sender address.");
     expect(gitignore).toContain(".env");
     expect(gitignore).toContain(".env.local");
   });
 
   it("Docker Compose 有免手写 .env 的安全本地默认值", () => {
     const compose = source("docker-compose.yml");
-    expect(compose).toContain("DATABASE_URL: ${DATABASE_URL:-postgresql://cdk:local-cdk-delivery-postgres-password@postgres:5432/cdk_delivery_core?schema=public}");
+    expect(compose).toContain("DATABASE_URL: ${DATABASE_URL:-postgresql://cdk:local-cdk-delivery-postgres-password@postgres:5432/cdk_delivery_core?schema=public&connection_limit=3}");
     expect(compose).toContain("JWT_SECRET: ${JWT_SECRET:-local-jwt-secret-change-before-public-use-32chars}");
     expect(compose).toContain("APP_SECRET: ${APP_SECRET:-local-app-secret-change-before-public-use-32chars}");
     expect(compose).toContain("POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-cdk-delivery-postgres-password}");
   });
 
+  it("部署脚本支持自定义 git 路径和仓库地址", () => {
+    const deploy = source("deploy.sh");
+    expect(deploy).toContain("REPO_URL=\"${REPO_URL:-https://github.com/xiaoxin-zk/cdk-delivery-core.git}\"");
+    expect(deploy).toContain("GIT_BIN=\"${GIT_BIN:-}\"");
+    expect(deploy).toContain("find_git()");
+    expect(deploy).toContain("\"$GIT\" clone \"$REPO_URL\" \"$INSTALL_DIR\"");
+    expect(deploy).toContain("\"$GIT\" pull --ff-only");
+  });
+
+  it("Docker 构建显式使用项目依赖里的 esbuild", () => {
+    const packageJson = JSON.parse(source("package.json")) as { devDependencies: Record<string, string> };
+    expect(packageJson.devDependencies.esbuild).toBe("0.23.1");
+    expect(source("Dockerfile")).toContain("RUN ./node_modules/.bin/esbuild scripts/bootstrap-production.ts");
+  });
+
   it("README 说明 npm run setup 自动生成本地配置", () => {
     const readme = source("README.md");
     expect(readme).toContain("npm run setup");
-    expect(readme).toContain("npm install` also runs this setup automatically");
-    expect(readme).toContain("new users do not need to hand-write a configuration file");
+    expect(readme).toContain("`npm install` automatically runs `npm run setup`");
+    expect(readme).toContain("without hand-writing a configuration file");
   });
 });

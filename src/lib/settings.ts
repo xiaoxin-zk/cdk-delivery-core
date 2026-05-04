@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   "smtp.username": process.env.SMTP_USERNAME ?? "",
   "smtp.password": process.env.SMTP_PASSWORD ?? "",
   "smtp.fromName": process.env.SMTP_FROM_NAME ?? "CDK Delivery Core",
-  "smtp.fromEmail": process.env.SMTP_FROM_EMAIL ?? "no-reply@example.com",
+  "smtp.fromEmail": process.env.SMTP_FROM_EMAIL ?? "",
   "smtp.secure": process.env.SMTP_SECURE ?? "false",
   "turnstile.enabled": "false",
   "turnstile.siteKey": process.env.TURNSTILE_SITE_KEY ?? "",

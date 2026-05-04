@@ -21,7 +21,7 @@ const defaults: SettingDefault[] = [
   { key: "smtp.username", value: process.env.SMTP_USERNAME ?? "" },
   { key: "smtp.password", value: process.env.SMTP_PASSWORD ?? "", encrypted: true },
   { key: "smtp.fromName", value: process.env.SMTP_FROM_NAME ?? "CDK Delivery Core" },
-  { key: "smtp.fromEmail", value: process.env.SMTP_FROM_EMAIL ?? "no-reply@example.com" },
+  { key: "smtp.fromEmail", value: process.env.SMTP_FROM_EMAIL ?? "" },
   { key: "smtp.secure", value: process.env.SMTP_SECURE ?? "false" },
   { key: "turnstile.enabled", value: "false" },
   { key: "turnstile.siteKey", value: process.env.TURNSTILE_SITE_KEY ?? "" },

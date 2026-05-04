@@ -43,27 +43,32 @@ export function POST(request: NextRequest) {
 
     if (policy.emailVerification) {
       const token = randomToken();
-      await prisma.emailToken.create({
-        data: {
-          userId: user.id,
-          type: "VERIFY_EMAIL",
-          tokenHash: hashToken(token),
-          expiresAt: addHours(new Date(), 24)
-        }
-      });
-      const siteName = await getSetting("site.name");
-      await sendMail({
-        to: email,
-        subject: `验证你的 ${siteName} 邮箱`,
-        html: buildActionEmail({
-          siteName,
-          title: "邮箱验证",
-          intro: "点击下方按钮完成邮箱验证。",
-          buttonText: "验证邮箱",
-          url: `${process.env.APP_URL ?? "http://localhost:3000"}/verify-email?token=${token}`,
-          expiresIn: "24 小时"
-        })
-      });
+      try {
+        await prisma.emailToken.create({
+          data: {
+            userId: user.id,
+            type: "VERIFY_EMAIL",
+            tokenHash: hashToken(token),
+            expiresAt: addHours(new Date(), 24)
+          }
+        });
+        const siteName = await getSetting("site.name");
+        await sendMail({
+          to: email,
+          subject: `验证你的 ${siteName} 邮箱`,
+          html: buildActionEmail({
+            siteName,
+            title: "邮箱验证",
+            intro: "点击下方按钮完成邮箱验证。",
+            buttonText: "验证邮箱",
+            url: `${process.env.APP_URL ?? "http://localhost:3000"}/verify-email?token=${token}`,
+            expiresIn: "24 小时"
+          })
+        });
+      } catch (error) {
+        await prisma.user.delete({ where: { id: user.id } }).catch(() => undefined);
+        throw error;
+      }
     }
 
     return ok({ user }, 201);

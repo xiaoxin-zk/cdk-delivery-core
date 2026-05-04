@@ -37,7 +37,8 @@ SMTP_PORT=587
 SMTP_USERNAME=
 SMTP_PASSWORD=
 SMTP_FROM_NAME=CDK Delivery Core
-SMTP_FROM_EMAIL=no-reply@example.com
+# Optional. Leave empty to use SMTP_USERNAME as the sender address.
+SMTP_FROM_EMAIL=
 SMTP_SECURE=false
 
 # Cloudflare Turnstile can also be configured in the admin UI.

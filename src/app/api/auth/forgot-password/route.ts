@@ -36,18 +36,30 @@ export function POST(request: NextRequest) {
         }
       });
       const siteName = await getSetting("site.name");
-      await sendMail({
-        to: email,
-        subject: `重置你的 ${siteName} 密码`,
-        html: buildActionEmail({
-          siteName,
-          title: "重置密码",
-          intro: "点击下方按钮设置新密码。",
-          buttonText: "重置密码",
-          url: `${process.env.APP_URL ?? "http://localhost:3000"}/reset-password?token=${token}`,
-          expiresIn: "30 分钟"
-        })
-      });
+      try {
+        await sendMail({
+          to: email,
+          subject: `重置你的 ${siteName} 密码`,
+          html: buildActionEmail({
+            siteName,
+            title: "重置密码",
+            intro: "点击下方按钮设置新密码。",
+            buttonText: "重置密码",
+            url: `${process.env.APP_URL ?? "http://localhost:3000"}/reset-password?token=${token}`,
+            expiresIn: "30 分钟"
+          })
+        });
+      } catch (error) {
+        await prisma.emailToken.deleteMany({
+          where: {
+            userId: user.id,
+            type: "RESET_PASSWORD",
+            tokenHash: hashToken(token),
+            usedAt: null
+          }
+        });
+        throw error;
+      }
     }
 
     return ok({ sent: true });
