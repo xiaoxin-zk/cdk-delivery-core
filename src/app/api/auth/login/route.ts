@@ -20,6 +20,10 @@ export function POST(request: NextRequest) {
     const email = normalizeEmail(body.email);
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !(await verifyPassword(body.password, user.passwordHash))) {
+      const pending = await prisma.pendingEmailVerification.findUnique({ where: { email } });
+      if (pending && (await verifyPassword(body.password, pending.passwordHash))) {
+        throw new ApiError("请先完成邮箱验证", 403, "EMAIL_NOT_VERIFIED");
+      }
       throw new ApiError("邮箱或密码错误", 401, "INVALID_CREDENTIALS");
     }
     if (user.status !== "ACTIVE") throw new ApiError("账号不可用，请联系管理员", 403, "USER_DISABLED");

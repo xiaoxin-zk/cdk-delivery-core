@@ -1,15 +1,12 @@
-import { addHours } from "date-fns";
 import { NextRequest } from "next/server";
 import { ApiError, ok, route } from "@/lib/api";
 import { getClientIp } from "@/lib/request";
-import { buildActionEmail, sendMail } from "@/lib/mailer";
+import { createPendingEmailVerification } from "@/lib/email-verification";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { getRegistrationPolicy, isEmailDomainAllowed } from "@/lib/security";
-import { getSetting } from "@/lib/settings";
 import { verifyTurnstile } from "@/lib/turnstile";
-import { hashToken, randomToken } from "@/lib/crypto";
 import { normalizeEmail, registerSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
@@ -32,44 +29,19 @@ export function POST(request: NextRequest) {
     if (existing) throw new ApiError("该邮箱已被注册", 409, "EMAIL_ALREADY_REGISTERED");
 
     const passwordHash = await hashPassword(body.password);
+    if (policy.emailVerification) {
+      await createPendingEmailVerification({ email, passwordHash });
+      return ok({ pendingVerification: true, email }, 202);
+    }
+
     const user = await prisma.user.create({
       data: {
         email,
         passwordHash,
-        emailVerified: !policy.emailVerification
+        emailVerified: true
       },
       select: { id: true, email: true, emailVerified: true }
     });
-
-    if (policy.emailVerification) {
-      const token = randomToken();
-      try {
-        await prisma.emailToken.create({
-          data: {
-            userId: user.id,
-            type: "VERIFY_EMAIL",
-            tokenHash: hashToken(token),
-            expiresAt: addHours(new Date(), 24)
-          }
-        });
-        const siteName = await getSetting("site.name");
-        await sendMail({
-          to: email,
-          subject: `验证你的 ${siteName} 邮箱`,
-          html: buildActionEmail({
-            siteName,
-            title: "邮箱验证",
-            intro: "点击下方按钮完成邮箱验证。",
-            buttonText: "验证邮箱",
-            url: `${process.env.APP_URL ?? "http://localhost:3000"}/verify-email?token=${token}`,
-            expiresIn: "24 小时"
-          })
-        });
-      } catch (error) {
-        await prisma.user.delete({ where: { id: user.id } }).catch(() => undefined);
-        throw error;
-      }
-    }
 
     return ok({ user }, 201);
   });

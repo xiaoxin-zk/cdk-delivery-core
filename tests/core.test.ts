@@ -607,13 +607,50 @@ describe("后台中文化和配置开关", () => {
 
   it("注册验证邮件发送失败时不会留下半注册用户", () => {
     const registerRoute = source("src/app/api/auth/register/route.ts");
+    const verification = source("src/lib/email-verification.ts");
     const mailer = source("src/lib/mailer.ts");
 
-    expect(registerRoute).toContain("await prisma.emailToken.create");
-    expect(registerRoute).toContain("await sendMail");
-    expect(registerRoute).toContain("await prisma.user.delete({ where: { id: user.id } }).catch(() => undefined)");
+    expect(registerRoute).toContain("await createPendingEmailVerification({ email, passwordHash })");
+    expect(registerRoute).toContain("pendingVerification: true");
+    expect(registerRoute).not.toContain("emailVerified: !policy.emailVerification");
+    expect(verification).toContain("export async function createPendingEmailVerification");
+    expect(verification).toContain("await prisma.pendingEmailVerification.upsert");
+    expect(verification).toContain("await sendMail");
+    expect(verification).toContain("await prisma.pendingEmailVerification.delete");
     expect(mailer).toContain("SMTP_SEND_FAILED");
     expect(mailer).toContain("configuredFromEmail === \"no-reply@example.com\" ? username");
+  });
+
+  it("邮箱验证开启时验证链接通过后才创建正式用户", () => {
+    const schema = source("prisma/schema.prisma");
+    const migration = source("prisma/migrations/20260504000100_add_pending_email_verifications/migration.sql");
+    const verifyRoute = source("src/app/api/auth/verify-email/route.ts");
+    const loginRoute = source("src/app/api/auth/login/route.ts");
+
+    expect(schema).toContain("model PendingEmailVerification");
+    expect(migration).toContain("CREATE TABLE \"pending_email_verifications\"");
+    expect(verifyRoute).toContain("prisma.pendingEmailVerification.findFirst");
+    expect(verifyRoute).toContain("tx.user.create");
+    expect(verifyRoute).toContain("emailVerified: true");
+    expect(verifyRoute).toContain("tx.pendingEmailVerification.delete");
+    expect(loginRoute).toContain("prisma.pendingEmailVerification.findUnique");
+    expect(loginRoute).toContain("EMAIL_NOT_VERIFIED");
+  });
+
+  it("未验证邮箱登录后可以重新发送验证邮件", () => {
+    const loginRoute = source("src/app/api/auth/login/route.ts");
+    const resendRoute = source("src/app/api/auth/resend-verification/route.ts");
+    const authForms = source("src/components/auth/AuthForms.tsx");
+
+    expect(loginRoute).toContain("EMAIL_NOT_VERIFIED");
+    expect(resendRoute).toContain("resendPendingVerificationEmail");
+    expect(resendRoute).toContain("verifyPassword");
+    expect(resendRoute).toContain("pendingEmailVerification");
+    expect(resendRoute).toContain("resend-verification-email");
+    expect(authForms).toContain("EMAIL_NOT_VERIFIED");
+    expect(authForms).toContain("重新发送验证邮件");
+    expect(authForms).toContain("/api/auth/resend-verification");
+    expect(authForms).toContain("请打开邮箱点击验证链接");
   });
 });
 

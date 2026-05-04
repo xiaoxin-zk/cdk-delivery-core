@@ -215,6 +215,19 @@ model EmailToken {
   @@map("email_tokens")
 }
 
+model PendingEmailVerification {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  tokenHash    String   @map("token_hash")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([tokenHash])
+  @@map("pending_email_verifications")
+}
+
 model AuditLog {
   id         String   @id @default(uuid())
   actorId    String?  @map("actor_id")

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api } from "@/components/api";
+import { api, ApiClientError } from "@/components/api";
 import { Turnstile } from "@/components/Turnstile";
 import { Button, Card, Input, Label } from "@/components/ui";
 
@@ -33,18 +33,23 @@ export function LoginForm({ settings }: { settings: PublicSettings }) {
   const router = useRouter();
   const { message, error, setMessage, setError } = useMessage();
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [unverifiedCredentials, setUnverifiedCredentials] = useState<{ email: string; password: string } | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
 
   async function submit(formData: FormData) {
     setLoading(true);
     setError("");
     setMessage("");
+    setUnverifiedCredentials(null);
+    const email = String(formData.get("email") ?? "");
+    const password = String(formData.get("password") ?? "");
     try {
       await api("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({
-          email: formData.get("email"),
-          password: formData.get("password"),
+          email,
+          password,
           remember: formData.get("remember") === "on",
           turnstileToken
         })
@@ -53,9 +58,32 @@ export function LoginForm({ settings }: { settings: PublicSettings }) {
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "登录失败");
+      if (err instanceof ApiClientError && err.code === "EMAIL_NOT_VERIFIED") {
+        setUnverifiedCredentials({ email, password });
+        setError("该账号还没有完成邮箱验证。请打开注册邮件中的验证链接，或点击下方按钮重新发送验证邮件。");
+      } else {
+        setError(err instanceof Error ? err.message : "登录失败");
+      }
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function resendVerification() {
+    if (!unverifiedCredentials) return;
+    setResending(true);
+    setError("");
+    setMessage("");
+    try {
+      await api("/api/auth/resend-verification", {
+        method: "POST",
+        body: JSON.stringify({ ...unverifiedCredentials, turnstileToken })
+      });
+      setMessage("验证邮件已重新发送，请打开邮箱点击验证链接。");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "发送验证邮件失败");
+    } finally {
+      setResending(false);
     }
   }
 
@@ -80,6 +108,11 @@ export function LoginForm({ settings }: { settings: PublicSettings }) {
           onToken={setTurnstileToken}
         />
         <Button disabled={loading}>{loading ? "登录中..." : "登录"}</Button>
+        {unverifiedCredentials ? (
+          <Button type="button" variant="secondary" disabled={resending} onClick={resendVerification}>
+            {resending ? "发送中..." : "重新发送验证邮件"}
+          </Button>
+        ) : null}
         {settings.forgotPasswordEnabled ? <Link className="text-sm text-accent" href="/forgot-password">忘记密码？</Link> : null}
         <Message message={message} error={error} />
       </form>
@@ -106,8 +139,8 @@ export function RegisterForm({ settings }: { settings: PublicSettings }) {
           turnstileToken
         })
       });
-      setMessage("注册成功，请按页面提示登录或验证邮箱。");
-      window.setTimeout(() => router.push("/login"), 900);
+      setMessage("注册成功。如果站点开启了邮箱验证，请打开邮箱点击验证链接后再登录。");
+      window.setTimeout(() => router.push("/login"), 1800);
     } catch (err) {
       setError(err instanceof Error ? err.message : "注册失败");
     } finally {
