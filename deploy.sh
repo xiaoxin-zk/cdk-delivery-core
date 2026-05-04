@@ -37,6 +37,27 @@ find_git() {
   exit 1
 }
 
+prompt_password() {
+  local password=""
+  local confirm=""
+  while true; do
+    read -r -s -p "管理员密码（至少 12 位）: " password < /dev/tty
+    echo ""
+    read -r -s -p "再次输入管理员密码: " confirm < /dev/tty
+    echo ""
+    if [ "$password" != "$confirm" ]; then
+      echo "✖ 两次密码不一致，请重新输入。"
+      continue
+    fi
+    if [ "${#password}" -lt 12 ]; then
+      echo "✖ 管理员密码至少 12 位。"
+      continue
+    fi
+    printf "%s" "$password"
+    return
+  done
+}
+
 GIT="$(find_git)"
 
 # ── 1. Check Docker ──────────────────────────────────
@@ -66,10 +87,25 @@ fi
 # ── 3. Generate .env if missing ──────────────────────
 if [ ! -f .env ]; then
   echo "▶ 生成 .env 配置文件..."
+  echo "▶ 请设置首个管理员账号。"
+  if [ ! -r /dev/tty ]; then
+    echo "✖ 当前环境不支持交互输入。请在终端执行，或设置 ADMIN_EMAIL 和 ADMIN_PASSWORD 后再运行。"
+    exit 1
+  fi
+  DEFAULT_ADMIN_EMAIL="${ADMIN_EMAIL:-admin@example.com}"
+  read -r -p "管理员邮箱 [${DEFAULT_ADMIN_EMAIL}]: " ADMIN_EMAIL_INPUT < /dev/tty
+  ADMIN_EMAIL_VALUE="$(printf "%s" "${ADMIN_EMAIL_INPUT:-$DEFAULT_ADMIN_EMAIL}" | xargs)"
+  ADMIN_PASSWORD_VALUE="${ADMIN_PASSWORD:-}"
+  if [ -z "$ADMIN_PASSWORD_VALUE" ]; then
+    ADMIN_PASSWORD_VALUE="$(prompt_password)"
+  elif [ "${#ADMIN_PASSWORD_VALUE}" -lt 12 ]; then
+    echo "✖ 环境变量 ADMIN_PASSWORD 至少需要 12 位。"
+    exit 1
+  fi
+
   PG_PASS=$(openssl rand -base64 24)
   JWT=$(openssl rand -base64 32)
   APP=$(openssl rand -base64 32)
-  ADMIN_PASS=$(openssl rand -base64 18)
 
   cat > .env <<EOF
 APP_PORT=3000
@@ -84,8 +120,8 @@ REDIS_URL=
 JWT_SECRET=${JWT}
 APP_SECRET=${APP}
 
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=${ADMIN_PASS}
+ADMIN_EMAIL=${ADMIN_EMAIL_VALUE}
+ADMIN_PASSWORD=${ADMIN_PASSWORD_VALUE}
 
 SMTP_HOST=
 SMTP_PORT=587
@@ -100,10 +136,9 @@ TURNSTILE_SECRET_KEY=
 EOF
   echo "✔ .env 已生成（密钥已随机生成）"
   echo ""
-  echo "  管理员账号: admin@example.com"
-  echo "  管理员密码: ${ADMIN_PASS}"
+  echo "  管理员账号: ${ADMIN_EMAIL_VALUE}"
   echo ""
-  echo "  ⚠ 请记住以上密码，或稍后修改 .env 中的 ADMIN_PASSWORD"
+  echo "  ⚠ 请妥善保存管理员密码。"
   echo ""
 fi
 

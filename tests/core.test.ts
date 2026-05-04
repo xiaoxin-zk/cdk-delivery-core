@@ -683,6 +683,10 @@ describe("默认安装配置", () => {
     expect(deploy).toContain("REPO_URL=\"${REPO_URL:-https://github.com/xiaoxin-zk/cdk-delivery-core.git}\"");
     expect(deploy).toContain("GIT_BIN=\"${GIT_BIN:-}\"");
     expect(deploy).toContain("find_git()");
+    expect(deploy).toContain("prompt_password()");
+    expect(deploy).toContain("< /dev/tty");
+    expect(deploy).toContain("管理员邮箱 [${DEFAULT_ADMIN_EMAIL}]");
+    expect(deploy).toContain("ADMIN_PASSWORD_VALUE=\"$(prompt_password)\"");
     expect(deploy).toContain("\"$GIT\" clone \"$REPO_URL\" \"$INSTALL_DIR\"");
     expect(deploy).toContain("\"$GIT\" pull --ff-only");
   });
@@ -698,5 +702,7 @@ describe("默认安装配置", () => {
     expect(readme).toContain("npm run setup");
     expect(readme).toContain("`npm install` automatically runs `npm run setup`");
     expect(readme).toContain("without hand-writing a configuration file");
+    expect(readme).toContain("交互式要求输入管理员邮箱和管理员密码");
+    expect(readme).toContain("prompts for the admin email and password");
   });
 });

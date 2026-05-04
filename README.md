@@ -98,23 +98,29 @@ http://localhost:3000
 curl -fsSL https://raw.githubusercontent.com/xiaoxin-zk/cdk-delivery-core/main/deploy.sh | bash
 ```
 
+首次安装时脚本会自动生成 `.env`、随机数据库密码、`JWT_SECRET` 和 `APP_SECRET`，并交互式要求输入管理员邮箱和管理员密码。已有 `.env` 时不会覆盖。
+
 Git 不在默认路径时传入 `GIT_BIN`；使用自己的 GitHub 仓库时传入 `REPO_URL`：
 
 ```bash
 GIT_BIN=/opt/git/bin/git REPO_URL=https://github.com/your-name/your-repo.git bash deploy.sh
 ```
 
-首次启动前请把 `.env` 里的 `APP_URL` 改成真实域名或服务器访问地址，否则注册验证、找回密码邮件里的链接会不正确。
+如果需要指定公开访问地址，可以在运行脚本时传入 `APP_URL`，否则脚本会默认使用服务器内网检测到的 IP 和 `3000` 端口：
+
+```bash
+APP_URL=http://114.215.175.9:3000 bash deploy.sh
+```
 
 ### 默认管理员
 
-自动生成的 `.env` 默认包含：
+本地开发自动生成的 `.env` 默认包含：
 
 ```env
 ADMIN_EMAIL=admin@example.com
 ```
 
-`ADMIN_PASSWORD` 会随机生成，请在本机 `.env` 中查看。首次登录后建议立刻在界面中修改密码。公开部署前请改成自己的管理员邮箱和强密码，或在完成初始化后移除 `ADMIN_PASSWORD`。
+`ADMIN_PASSWORD` 会随机生成，请在本机 `.env` 中查看。服务器部署脚本会改为交互式输入管理员邮箱和密码。首次登录后建议立刻在界面中确认账号安全。
 
 ### 本地开发
 
@@ -354,23 +360,29 @@ If you use the GitHub prebuilt image, run:
 curl -fsSL https://raw.githubusercontent.com/xiaoxin-zk/cdk-delivery-core/main/deploy.sh | bash
 ```
 
+On first install, the script generates `.env`, random database password, `JWT_SECRET`, and `APP_SECRET`, then prompts for the admin email and password. Existing `.env` files are kept unchanged.
+
 If Git is not in the default path, pass `GIT_BIN`. If you deploy from your own GitHub repository, pass `REPO_URL`:
 
 ```bash
 GIT_BIN=/opt/git/bin/git REPO_URL=https://github.com/your-name/your-repo.git bash deploy.sh
 ```
 
-Before the first production start, set `APP_URL` in `.env` to your real domain or server URL. Otherwise verification and password reset emails will contain the wrong link.
+To set the public URL without editing `.env`, pass `APP_URL` when running the script. Otherwise the script defaults to the detected server IP on port `3000`:
+
+```bash
+APP_URL=http://114.215.175.9:3000 bash deploy.sh
+```
 
 ### Default Admin
 
-The generated `.env` uses:
+The local development `.env` generator uses:
 
 ```env
 ADMIN_EMAIL=admin@example.com
 ```
 
-`ADMIN_PASSWORD` is randomly generated. Check your local `.env` for the value. Change the password after the first login. Before public deployment, replace the admin email/password or remove `ADMIN_PASSWORD` after bootstrap.
+`ADMIN_PASSWORD` is randomly generated. Check your local `.env` for the value. The server deployment script prompts for the admin email and password interactively. After the first login, review the account security in the UI.
 
 ### Local Development
 
