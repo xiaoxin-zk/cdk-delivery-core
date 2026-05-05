@@ -37,6 +37,10 @@ find_git() {
   exit 1
 }
 
+random_secret() {
+  openssl rand -hex "$1"
+}
+
 prompt_password() {
   local password=""
   local confirm=""
@@ -103,9 +107,9 @@ if [ ! -f .env ]; then
     exit 1
   fi
 
-  PG_PASS=$(openssl rand -base64 24)
-  JWT=$(openssl rand -base64 32)
-  APP=$(openssl rand -base64 32)
+  PG_PASS=$(random_secret 24)
+  JWT=$(random_secret 32)
+  APP=$(random_secret 32)
 
   cat > .env <<EOF
 APP_PORT=3000

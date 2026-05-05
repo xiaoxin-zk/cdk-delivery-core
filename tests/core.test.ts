@@ -683,6 +683,8 @@ describe("默认安装配置", () => {
     expect(deploy).toContain("REPO_URL=\"${REPO_URL:-https://github.com/xiaoxin-zk/cdk-delivery-core.git}\"");
     expect(deploy).toContain("GIT_BIN=\"${GIT_BIN:-}\"");
     expect(deploy).toContain("find_git()");
+    expect(deploy).toContain("random_secret()");
+    expect(deploy).toContain("PG_PASS=$(random_secret 24)");
     expect(deploy).toContain("prompt_password()");
     expect(deploy).toContain("< /dev/tty");
     expect(deploy).toContain("管理员邮箱 [${DEFAULT_ADMIN_EMAIL}]");
