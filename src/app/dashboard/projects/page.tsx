@@ -13,6 +13,7 @@ export default async function MyProjectsPage() {
   if (!user) redirect("/login");
   const projects = await prisma.project.findMany({
     where: { ownerId: user.id },
+    take: 50,
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { cdks: true, claims: true } } }
   });

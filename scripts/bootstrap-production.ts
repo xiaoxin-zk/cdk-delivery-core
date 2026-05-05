@@ -107,12 +107,17 @@ async function initializeAdmin() {
 
   const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (existing) {
-    const passwordHash = await bcrypt.hash(adminPassword, 12);
+    const passwordMatches = await bcrypt.compare(adminPassword, existing.passwordHash);
     await prisma.user.update({
       where: { email: adminEmail },
-      data: { role: "ADMIN", status: "ACTIVE", emailVerified: true, passwordHash }
+      data: {
+        role: "ADMIN",
+        status: "ACTIVE",
+        emailVerified: true,
+        ...(passwordMatches ? {} : { passwordHash: await bcrypt.hash(adminPassword, 12) })
+      }
     });
-    console.log(`Admin account ensured (password synced from env): ${adminEmail}`);
+    console.log(passwordMatches ? `Admin account ensured: ${adminEmail}` : `Admin account ensured (password synced from env): ${adminEmail}`);
     return;
   }
 

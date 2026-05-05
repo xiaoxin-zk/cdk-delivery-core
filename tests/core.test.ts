@@ -660,6 +660,28 @@ describe("后台中文化和配置开关", () => {
     expect(source("src/components/Turnstile.tsx")).toContain("\"expired-callback\"");
     expect(source("src/app/admin/settings/page.tsx")).toContain("输入邮箱验证码");
   });
+
+  it("生产配置保持低占用并减少重复查询和启动开销", () => {
+    const compose = source("docker-compose.prod.yml");
+    const bootstrap = source("scripts/bootstrap-production.ts");
+    const settings = source("src/lib/settings.ts");
+    const layout = source("src/app/layout.tsx");
+    const projectsPage = source("src/app/projects/page.tsx");
+    const myProjectsPage = source("src/app/dashboard/projects/page.tsx");
+
+    expect(compose).toContain("NODE_OPTIONS: \"--max-old-space-size=128\"");
+    expect(compose).toContain("memory: 256M");
+    expect(bootstrap).toContain("bcrypt.compare(adminPassword, existing.passwordHash)");
+    expect(bootstrap).toContain("passwordMatches ? {} : { passwordHash: await bcrypt.hash(adminPassword, 12) }");
+    expect(settings).toContain("SETTINGS_CACHE_TTL_MS");
+    expect(settings).toContain("clearSettingsCache()");
+    expect(layout).toContain("getSessionUser");
+    expect(layout).not.toContain("getCurrentUser");
+    expect(projectsPage).toContain("const pageSize = 12");
+    expect(projectsPage).toContain("skip: (page - 1) * pageSize");
+    expect(projectsPage).toContain("下一页");
+    expect(myProjectsPage).toContain("take: 50");
+  });
 });
 
 describe("默认安装配置", () => {

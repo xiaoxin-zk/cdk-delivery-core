@@ -27,6 +27,12 @@ type SessionPayload = {
   role: UserRole;
 };
 
+export type SessionUser = {
+  id: string;
+  email: string;
+  role: UserRole;
+};
+
 export function createSessionToken(user: AuthUser, remember = false) {
   return jwt.sign(
     {
@@ -78,6 +84,22 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
     if (!user || user.status !== "ACTIVE") return null;
     return user;
+  } catch {
+    return null;
+  }
+}
+
+export function getSessionUser(): SessionUser | null {
+  const token = cookies().get(AUTH_COOKIE)?.value;
+  if (!token) return null;
+
+  try {
+    const payload = jwt.verify(token, requireSecret("JWT_SECRET")) as SessionPayload;
+    return {
+      id: payload.sub,
+      email: payload.email,
+      role: payload.role
+    };
   } catch {
     return null;
   }

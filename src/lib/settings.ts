@@ -59,8 +59,32 @@ export function getSettingValueType(key: string) {
 }
 export const SETTING_KEYS = new Set(Object.keys(DEFAULT_SETTINGS));
 export const SENSITIVE_CONFIGURED_LABEL = "已配置";
+const SETTINGS_CACHE_TTL_MS = 10_000;
+
+type SettingsCacheEntry = {
+  expiresAt: number;
+  map: Map<string, string>;
+};
+
+const settingsCache = new Map<string, SettingsCacheEntry>();
+
+function cacheKey(keys?: string[]) {
+  return keys ? [...keys].sort().join("\0") : "__all__";
+}
+
+function cloneSettingsMap(map: Map<string, string>) {
+  return new Map(map);
+}
+
+export function clearSettingsCache() {
+  settingsCache.clear();
+}
 
 export async function getSettingsMap(keys?: string[]) {
+  const key = cacheKey(keys);
+  const cached = settingsCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cloneSettingsMap(cached.map);
+
   const rows = await prisma.systemSetting.findMany({
     where: keys ? { key: { in: keys } } : undefined
   });
@@ -82,6 +106,10 @@ export async function getSettingsMap(keys?: string[]) {
     }
   }
 
+  settingsCache.set(key, {
+    expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS,
+    map: cloneSettingsMap(map)
+  });
   return map;
 }
 
@@ -126,6 +154,7 @@ export async function saveSettings(updates: Record<string, string>) {
       create: { key, value, encrypted, valueType }
     });
   }
+  clearSettingsCache();
 }
 
 export async function getAdminSettings() {

@@ -10,25 +10,42 @@ export const dynamic = "force-dynamic";
 export default async function ProjectsPage({
   searchParams
 }: {
-  searchParams: { search?: string; status?: string };
+  searchParams: { search?: string; status?: string; page?: string };
 }) {
   const search = searchParams.search?.trim();
   const status = searchParams.status;
-  const projects = await prisma.project.findMany({
-    where: {
-      visibility: "PUBLIC",
-      reviewStatus: "APPROVED",
-      status: status && ["PUBLIC", "PAUSED", "ENDED"].includes(status) ? (status as never) : undefined,
-      OR: search
-        ? [
-            { name: { contains: search, mode: "insensitive" } },
-            { description: { contains: search, mode: "insensitive" } }
-          ]
-        : undefined
-    },
-    orderBy: { createdAt: "desc" },
-    include: { _count: { select: { cdks: true, claims: true } } }
-  });
+  const page = Math.max(1, Number(searchParams.page ?? "1") || 1);
+  const pageSize = 12;
+  const where = {
+    visibility: "PUBLIC" as const,
+    reviewStatus: "APPROVED" as const,
+    status: status && ["PUBLIC", "PAUSED", "ENDED"].includes(status) ? (status as never) : undefined,
+    OR: search
+      ? [
+          { name: { contains: search, mode: "insensitive" as const } },
+          { description: { contains: search, mode: "insensitive" as const } }
+        ]
+      : undefined
+  };
+  const [projects, total] = await Promise.all([
+    prisma.project.findMany({
+      where,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      orderBy: { createdAt: "desc" },
+      include: { _count: { select: { cdks: true, claims: true } } }
+    }),
+    prisma.project.count({ where })
+  ]);
+  const pageCount = Math.ceil(total / pageSize);
+  const baseParams = new URLSearchParams();
+  if (search) baseParams.set("search", search);
+  if (status) baseParams.set("status", status);
+  function pageHref(nextPage: number) {
+    const params = new URLSearchParams(baseParams);
+    params.set("page", String(nextPage));
+    return `/projects?${params.toString()}`;
+  }
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -75,6 +92,23 @@ export default async function ProjectsPage({
           ))}
         </div>
       )}
+      {pageCount > 1 ? (
+        <div className="mt-8 flex items-center justify-center gap-3 text-sm">
+          {page > 1 ? (
+            <Link className="rounded border border-line bg-white px-4 py-2 hover:bg-paper" href={pageHref(page - 1)}>
+              上一页
+            </Link>
+          ) : null}
+          <span className="text-ink/60">
+            第 {page} / {pageCount} 页
+          </span>
+          {page < pageCount ? (
+            <Link className="rounded border border-line bg-white px-4 py-2 hover:bg-paper" href={pageHref(page + 1)}>
+              下一页
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
     </main>
   );
 }

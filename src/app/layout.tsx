@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { getCurrentUser } from "@/lib/auth";
+import { getSessionUser } from "@/lib/auth";
 import { getPublicSettings } from "@/lib/settings";
 import { LogOutButton } from "@/components/auth/LogOutButton";
 
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [settings, user] = await Promise.all([getPublicSettings(), getCurrentUser()]);
+  const [settings, user] = await Promise.all([getPublicSettings(), getSessionUser()]);
 
   return (
     <html lang="zh-CN">
