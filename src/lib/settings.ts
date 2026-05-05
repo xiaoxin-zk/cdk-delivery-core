@@ -146,6 +146,7 @@ export async function getPublicSettings() {
     "site.termsUrl",
     "site.privacyUrl",
     "registration.enabled",
+    "email.verification.enabled",
     "forgotPassword.enabled",
     "turnstile.enabled",
     "turnstile.siteKey",
@@ -162,6 +163,7 @@ export async function getPublicSettings() {
     termsUrl: map.get("site.termsUrl") ?? "",
     privacyUrl: map.get("site.privacyUrl") ?? "",
     registrationEnabled: asBoolean(map.get("registration.enabled")),
+    emailVerificationEnabled: asBoolean(map.get("email.verification.enabled")),
     forgotPasswordEnabled: asBoolean(map.get("forgotPassword.enabled")),
     turnstile: {
       enabled: asBoolean(map.get("turnstile.enabled")),

@@ -251,7 +251,7 @@ docker compose logs -f app
 
 检查 SMTP 主机、端口、用户名、密码、发件邮箱和 `SMTP_SECURE`。这些配置既可以写在 `.env`，也可以在后台邮件设置中配置。发件邮箱留空时系统会使用 `SMTP_USERNAME`；多数邮箱服务商要求发件邮箱与 SMTP 账号一致或是已验证别名。
 
-如果开启了邮箱验证，注册验证邮件发送失败时接口会返回 SMTP 错误，并自动清理刚创建的用户，避免出现“前台注册失败、后台已经有用户”的半注册状态。
+如果开启了邮箱验证，用户注册时需要先接收并输入邮箱验证码；验证码通过后才会创建正式账号。验证码邮件发送失败时不会创建用户。
 
 #### Turnstile 显示未配置
 
@@ -513,7 +513,7 @@ If SMTP and forgot password are enabled, use the forgot password flow. Otherwise
 
 Check SMTP host, port, username, password, sender address, and `SMTP_SECURE`. You can configure these in `.env` or in `/admin/email`. If the sender address is empty, the app uses `SMTP_USERNAME`; many providers require the sender to match the SMTP account or a verified alias.
 
-When email verification is enabled, a verification email failure now returns an SMTP error and removes the just-created user so the app does not leave a half-registered account behind.
+When email verification is enabled, users must request and enter an email code during registration. A user account is created only after the code is accepted. If the code email fails, no user is created.
 
 #### Turnstile Reports Missing Configuration
 

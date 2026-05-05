@@ -9,6 +9,7 @@ import { Button, Card, Input, Label } from "@/components/ui";
 
 type PublicSettings = {
   registrationEnabled: boolean;
+  emailVerificationEnabled: boolean;
   forgotPasswordEnabled: boolean;
   turnstile: {
     enabled: boolean;
@@ -60,7 +61,7 @@ export function LoginForm({ settings }: { settings: PublicSettings }) {
     } catch (err) {
       if (err instanceof ApiClientError && err.code === "EMAIL_NOT_VERIFIED") {
         setUnverifiedCredentials({ email, password });
-        setError("该账号还没有完成邮箱验证。请打开注册邮件中的验证链接，或点击下方按钮重新发送验证邮件。");
+        setError("该邮箱注册还没有完成。请回到注册页输入邮箱验证码完成注册。");
       } else {
         setError(err instanceof Error ? err.message : "登录失败");
       }
@@ -75,13 +76,13 @@ export function LoginForm({ settings }: { settings: PublicSettings }) {
     setError("");
     setMessage("");
     try {
-      await api("/api/auth/resend-verification", {
+      await api("/api/auth/send-register-code", {
         method: "POST",
         body: JSON.stringify({ ...unverifiedCredentials, turnstileToken })
       });
-      setMessage("验证邮件已重新发送，请打开邮箱点击验证链接。");
+      setMessage("邮箱验证码已重新发送，请回到注册页输入验证码完成注册。");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "发送验证邮件失败");
+      setError(err instanceof Error ? err.message : "发送验证码失败");
     } finally {
       setResending(false);
     }
@@ -110,7 +111,7 @@ export function LoginForm({ settings }: { settings: PublicSettings }) {
         <Button disabled={loading}>{loading ? "登录中..." : "登录"}</Button>
         {unverifiedCredentials ? (
           <Button type="button" variant="secondary" disabled={resending} onClick={resendVerification}>
-            {resending ? "发送中..." : "重新发送验证邮件"}
+            {resending ? "发送中..." : "重新发送邮箱验证码"}
           </Button>
         ) : null}
         {settings.forgotPasswordEnabled ? <Link className="text-sm text-accent" href="/forgot-password">忘记密码？</Link> : null}
@@ -124,9 +125,17 @@ export function RegisterForm({ settings }: { settings: PublicSettings }) {
   const router = useRouter();
   const { message, error, setMessage, setError } = useMessage();
   const [loading, setLoading] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileKey, setTurnstileKey] = useState(0);
+  const registerTurnstileEnabled = settings.turnstile.enabled && settings.turnstile.contexts.register;
 
   async function submit(formData: FormData) {
+    if (registerTurnstileEnabled && !turnstileToken) {
+      setError("请先完成人机验证");
+      setMessage("");
+      return;
+    }
     setLoading(true);
     setError("");
     setMessage("");
@@ -136,15 +145,44 @@ export function RegisterForm({ settings }: { settings: PublicSettings }) {
         body: JSON.stringify({
           email: formData.get("email"),
           password: formData.get("password"),
+          emailCode: formData.get("emailCode"),
           turnstileToken
         })
       });
-      setMessage("注册成功。如果站点开启了邮箱验证，请打开邮箱点击验证链接后再登录。");
-      window.setTimeout(() => router.push("/login"), 1800);
+      setMessage("注册成功，现在可以登录。");
+      window.setTimeout(() => router.push("/login"), 900);
     } catch (err) {
       setError(err instanceof Error ? err.message : "注册失败");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function sendCode(formData: FormData) {
+    if (registerTurnstileEnabled && !turnstileToken) {
+      setError("请先完成人机验证");
+      setMessage("");
+      return;
+    }
+    setSendingCode(true);
+    setError("");
+    setMessage("");
+    try {
+      await api("/api/auth/send-register-code", {
+        method: "POST",
+        body: JSON.stringify({
+          email: formData.get("email"),
+          password: formData.get("password"),
+          turnstileToken
+        })
+      });
+      setMessage("邮箱验证码已发送，请查看邮箱并在 10 分钟内完成注册。");
+      setTurnstileToken("");
+      setTurnstileKey((value) => value + 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "发送验证码失败");
+    } finally {
+      setSendingCode(false);
     }
   }
 
@@ -167,12 +205,24 @@ export function RegisterForm({ settings }: { settings: PublicSettings }) {
           密码
           <Input name="password" type="password" required minLength={8} autoComplete="new-password" />
         </Label>
+        {settings.emailVerificationEnabled ? (
+          <Label>
+            邮箱验证码
+            <Input name="emailCode" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} placeholder="6 位验证码" />
+          </Label>
+        ) : null}
         <Turnstile
-          enabled={settings.turnstile.enabled && settings.turnstile.contexts.register}
+          key={turnstileKey}
+          enabled={registerTurnstileEnabled}
           siteKey={settings.turnstile.siteKey}
           onToken={setTurnstileToken}
         />
-        <Button disabled={loading}>{loading ? "注册中..." : "创建账号"}</Button>
+        {settings.emailVerificationEnabled ? (
+          <Button formAction={sendCode} variant="secondary" disabled={sendingCode || loading || (registerTurnstileEnabled && !turnstileToken)}>
+            {sendingCode ? "发送中..." : "发送邮箱验证码"}
+          </Button>
+        ) : null}
+        <Button disabled={loading || (registerTurnstileEnabled && !turnstileToken)}>{loading ? "注册中..." : "创建账号"}</Button>
         <Message message={message} error={error} />
       </form>
     </AuthCard>

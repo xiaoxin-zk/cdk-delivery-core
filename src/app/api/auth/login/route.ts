@@ -22,7 +22,7 @@ export function POST(request: NextRequest) {
     if (!user || !(await verifyPassword(body.password, user.passwordHash))) {
       const pending = await prisma.pendingEmailVerification.findUnique({ where: { email } });
       if (pending && (await verifyPassword(body.password, pending.passwordHash))) {
-        throw new ApiError("请先完成邮箱验证", 403, "EMAIL_NOT_VERIFIED");
+        throw new ApiError("请先输入邮箱验证码完成注册", 403, "EMAIL_NOT_VERIFIED");
       }
       throw new ApiError("邮箱或密码错误", 401, "INVALID_CREDENTIALS");
     }

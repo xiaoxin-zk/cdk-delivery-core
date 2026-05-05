@@ -32,7 +32,7 @@ export default function AdminSettingsPage() {
             key: "email.verification.enabled",
             label: "开启邮箱验证",
             type: "boolean",
-            description: "开启后，用户注册后需要点击邮箱中的验证链接才能正常使用账号。"
+            description: "开启后，用户注册时需要先接收并输入邮箱验证码，验证通过后才会创建账号。"
           },
           {
             key: "forgotPassword.enabled",

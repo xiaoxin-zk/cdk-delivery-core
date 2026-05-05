@@ -39,7 +39,9 @@ export function Turnstile({
       if (window.turnstile && ref.current && !widgetId) {
         widgetId = window.turnstile.render(ref.current, {
           sitekey: siteKey,
-          callback: onToken
+          callback: onToken,
+          "expired-callback": () => onToken(""),
+          "error-callback": () => onToken("")
         });
         window.clearInterval(timer);
       }

@@ -22,6 +22,13 @@ export const passwordSchema = z
 export const registerSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
+  emailCode: z.string().trim().regex(/^\d{6}$/, "请输入 6 位邮箱验证码").optional(),
+  turnstileToken: z.string().optional()
+});
+
+export const sendRegisterCodeSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
   turnstileToken: z.string().optional()
 });
 

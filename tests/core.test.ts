@@ -605,15 +605,17 @@ describe("后台中文化和配置开关", () => {
     expect(source("src/components/auth/AuthForms.tsx")).toContain("当前站点已关闭注册");
   });
 
-  it("注册验证邮件发送失败时不会留下半注册用户", () => {
+  it("邮箱验证码发送失败时不会留下半注册用户", () => {
     const registerRoute = source("src/app/api/auth/register/route.ts");
+    const sendCodeRoute = source("src/app/api/auth/send-register-code/route.ts");
     const verification = source("src/lib/email-verification.ts");
     const mailer = source("src/lib/mailer.ts");
 
-    expect(registerRoute).toContain("await createPendingEmailVerification({ email, passwordHash })");
-    expect(registerRoute).toContain("pendingVerification: true");
+    expect(registerRoute).toContain("EMAIL_CODE_REQUIRED");
+    expect(registerRoute).toContain("await createUserFromRegisterCode");
+    expect(sendCodeRoute).toContain("await sendRegisterVerificationCode({ email, passwordHash })");
     expect(registerRoute).not.toContain("emailVerified: !policy.emailVerification");
-    expect(verification).toContain("export async function createPendingEmailVerification");
+    expect(verification).toContain("export async function sendRegisterVerificationCode");
     expect(verification).toContain("await prisma.pendingEmailVerification.upsert");
     expect(verification).toContain("await sendMail");
     expect(verification).toContain("await prisma.pendingEmailVerification.delete");
@@ -621,36 +623,42 @@ describe("后台中文化和配置开关", () => {
     expect(mailer).toContain("configuredFromEmail === \"no-reply@example.com\" ? username");
   });
 
-  it("邮箱验证开启时验证链接通过后才创建正式用户", () => {
+  it("邮箱验证开启时输入验证码通过后才创建正式用户", () => {
     const schema = source("prisma/schema.prisma");
     const migration = source("prisma/migrations/20260504000100_add_pending_email_verifications/migration.sql");
-    const verifyRoute = source("src/app/api/auth/verify-email/route.ts");
+    const verification = source("src/lib/email-verification.ts");
     const loginRoute = source("src/app/api/auth/login/route.ts");
 
     expect(schema).toContain("model PendingEmailVerification");
     expect(migration).toContain("CREATE TABLE \"pending_email_verifications\"");
-    expect(verifyRoute).toContain("prisma.pendingEmailVerification.findFirst");
-    expect(verifyRoute).toContain("tx.user.create");
-    expect(verifyRoute).toContain("emailVerified: true");
-    expect(verifyRoute).toContain("tx.pendingEmailVerification.delete");
+    expect(verification).toContain("export async function createUserFromRegisterCode");
+    expect(verification).toContain("tokenHash: hashToken(input.code.trim())");
+    expect(verification).toContain("tx.user.create");
+    expect(verification).toContain("emailVerified: true");
+    expect(verification).toContain("tx.pendingEmailVerification.delete");
     expect(loginRoute).toContain("prisma.pendingEmailVerification.findUnique");
     expect(loginRoute).toContain("EMAIL_NOT_VERIFIED");
   });
 
-  it("未验证邮箱登录后可以重新发送验证邮件", () => {
+  it("注册页可以发送邮箱验证码并提交验证码注册", () => {
     const loginRoute = source("src/app/api/auth/login/route.ts");
-    const resendRoute = source("src/app/api/auth/resend-verification/route.ts");
+    const sendCodeRoute = source("src/app/api/auth/send-register-code/route.ts");
     const authForms = source("src/components/auth/AuthForms.tsx");
 
     expect(loginRoute).toContain("EMAIL_NOT_VERIFIED");
-    expect(resendRoute).toContain("resendPendingVerificationEmail");
-    expect(resendRoute).toContain("verifyPassword");
-    expect(resendRoute).toContain("pendingEmailVerification");
-    expect(resendRoute).toContain("resend-verification-email");
+    expect(sendCodeRoute).toContain("sendRegisterVerificationCode");
+    expect(sendCodeRoute).toContain("send-register-code-email");
+    expect(source("src/lib/settings.ts")).toContain("emailVerificationEnabled");
     expect(authForms).toContain("EMAIL_NOT_VERIFIED");
-    expect(authForms).toContain("重新发送验证邮件");
-    expect(authForms).toContain("/api/auth/resend-verification");
-    expect(authForms).toContain("请打开邮箱点击验证链接");
+    expect(authForms).toContain("发送邮箱验证码");
+    expect(authForms).toContain("邮箱验证码");
+    expect(authForms).toContain("settings.emailVerificationEnabled");
+    expect(authForms).toContain("emailCode: formData.get(\"emailCode\")");
+    expect(authForms).toContain("/api/auth/send-register-code");
+    expect(authForms).toContain("registerTurnstileEnabled && !turnstileToken");
+    expect(authForms).toContain("setTurnstileKey((value) => value + 1)");
+    expect(source("src/components/Turnstile.tsx")).toContain("\"expired-callback\"");
+    expect(source("src/app/admin/settings/page.tsx")).toContain("输入邮箱验证码");
   });
 });
 
