@@ -21,11 +21,11 @@ export default async function HomePage() {
           <div>
             <div className="mb-4 inline-flex items-center gap-2 rounded bg-white/10 px-3 py-1 text-sm">
               <Sparkles className="h-4 w-4" />
-              CDK / 激活码 / 礼品码分发管理
+              兑换码 / 礼品码 / 激活码服务
             </div>
-            <h1 className="max-w-3xl text-4xl font-semibold leading-tight md:text-6xl">创建、管理并安全分发你的兑换码项目</h1>
+            <h1 className="max-w-3xl text-4xl font-semibold leading-tight md:text-6xl">让兑换码发放更简单、更清楚</h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-white/76">
-              支持注册用户自助创建项目、批量导入 CDK、受限领取、后台审核、Turnstile 防滥用和 Docker 一键部署。
+              面向活动运营、产品兑换、福利发放等场景，统一管理兑换码库存、领取规则和发放记录，用户按项目自助领取。
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link className="inline-flex items-center rounded bg-white px-5 py-3 font-medium text-ink" href="/dashboard/projects/new">
@@ -38,7 +38,7 @@ export default async function HomePage() {
             </div>
           </div>
           <div className="grid content-end gap-3">
-            {["并发事务发码", "大小写原样保存", "敏感词审核", "SMTP 邮件与 Turnstile"].map((item) => (
+            {["创建发放项目", "导入兑换码库存", "设置领取规则", "查看领取记录"].map((item) => (
               <div key={item} className="flex items-center gap-3 rounded border border-white/15 bg-white/8 p-4">
                 <ShieldCheck className="h-5 w-5 text-emerald-300" />
                 <span>{item}</span>

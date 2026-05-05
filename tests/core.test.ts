@@ -605,6 +605,18 @@ describe("后台中文化和配置开关", () => {
     expect(source("src/components/auth/AuthForms.tsx")).toContain("当前站点已关闭注册");
   });
 
+  it("首页文案面向服务介绍而不是开发架构说明", () => {
+    const home = source("src/app/page.tsx");
+
+    expect(home).toContain("兑换码 / 礼品码 / 激活码服务");
+    expect(home).toContain("让兑换码发放更简单、更清楚");
+    expect(home).toContain("创建发放项目");
+    expect(home).toContain("查看领取记录");
+    expect(home).not.toContain("Docker 一键部署");
+    expect(home).not.toContain("并发事务发码");
+    expect(home).not.toContain("SMTP 邮件与 Turnstile");
+  });
+
   it("邮箱验证码发送失败时不会留下半注册用户", () => {
     const registerRoute = source("src/app/api/auth/register/route.ts");
     const sendCodeRoute = source("src/app/api/auth/send-register-code/route.ts");
