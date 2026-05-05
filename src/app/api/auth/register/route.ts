@@ -25,8 +25,8 @@ export function POST(request: NextRequest) {
       throw new ApiError("该邮箱后缀暂不允许注册", 403, "EMAIL_DOMAIN_BLOCKED");
     }
 
-    const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-    if (existing) throw new ApiError("该邮箱已被注册", 409, "EMAIL_ALREADY_REGISTERED");
+    const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, status: true } });
+    if (existing && existing.status !== "DELETED") throw new ApiError("该邮箱已被注册", 409, "EMAIL_ALREADY_REGISTERED");
 
     const passwordHash = await hashPassword(body.password);
     if (policy.emailVerification) {
@@ -35,14 +35,26 @@ export function POST(request: NextRequest) {
       return ok({ user }, 201);
     }
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        emailVerified: true
-      },
-      select: { id: true, email: true, emailVerified: true }
-    });
+    const user = existing
+      ? await prisma.user.update({
+          where: { email },
+          data: {
+            passwordHash,
+            status: "ACTIVE",
+            role: "USER",
+            emailVerified: true,
+            lastLoginAt: null
+          },
+          select: { id: true, email: true, emailVerified: true }
+        })
+      : await prisma.user.create({
+          data: {
+            email,
+            passwordHash,
+            emailVerified: true
+          },
+          select: { id: true, email: true, emailVerified: true }
+        });
 
     return ok({ user }, 201);
   });

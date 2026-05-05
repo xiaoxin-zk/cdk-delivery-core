@@ -661,6 +661,21 @@ describe("后台中文化和配置开关", () => {
     expect(source("src/app/admin/settings/page.tsx")).toContain("输入邮箱验证码");
   });
 
+  it("软删除用户不会继续占用注册邮箱", () => {
+    const registerRoute = source("src/app/api/auth/register/route.ts");
+    const sendCodeRoute = source("src/app/api/auth/send-register-code/route.ts");
+    const verification = source("src/lib/email-verification.ts");
+
+    expect(registerRoute).toContain("select: { id: true, status: true }");
+    expect(registerRoute).toContain("existing && existing.status !== \"DELETED\"");
+    expect(registerRoute).toContain("status: \"ACTIVE\"");
+    expect(registerRoute).toContain("lastLoginAt: null");
+    expect(sendCodeRoute).toContain("existing && existing.status !== \"DELETED\"");
+    expect(verification).toContain("existing.status === \"DELETED\"");
+    expect(verification).toContain("tx.user.update");
+    expect(verification).toContain("role: \"USER\"");
+  });
+
   it("生产配置保持低占用并减少重复查询和启动开销", () => {
     const compose = source("docker-compose.prod.yml");
     const bootstrap = source("scripts/bootstrap-production.ts");

@@ -52,6 +52,21 @@ export async function createUserFromRegisterCode(input: { email: string; passwor
   return prisma.$transaction(async (tx) => {
     const existing = await tx.user.findUnique({ where: { email: input.email } });
     if (existing) {
+      if (existing.status === "DELETED") {
+        const user = await tx.user.update({
+          where: { email: input.email },
+          data: {
+            passwordHash: input.passwordHash,
+            status: "ACTIVE",
+            role: "USER",
+            emailVerified: true,
+            lastLoginAt: null
+          },
+          select: { id: true, email: true, emailVerified: true }
+        });
+        await tx.pendingEmailVerification.delete({ where: { id: pending.id } });
+        return user;
+      }
       await tx.pendingEmailVerification.delete({ where: { id: pending.id } });
       throw new ApiError("该邮箱已被注册", 409, "EMAIL_ALREADY_REGISTERED");
     }
